@@ -1,0 +1,11 @@
+[package]
+name = "aoc2213"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+lalrpop = "0.19.8"
+
+[dependencies]
+itertools = "0.10.5"
+lalrpop-util = "0.19.8"

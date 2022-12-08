@@ -1,0 +1,25 @@
+use std::str::FromStr;
+use crate::ast::PacketData;
+
+grammar;
+
+pub PacketData: PacketData = {
+    Num => PacketData::Integer(<>),
+    "[" <Exprs> "]" => PacketData::List(<>),
+};
+
+Exprs = Comma<PacketData>;
+
+Comma<T>: Vec<T> = { // (0)
+    <mut v:(<T> ",")*> <e:T?> => match e { // (1)
+        None=> v,
+        Some(e) => {
+            v.push(e);
+            v
+        }
+    }
+};
+
+Num: usize = {
+    r"[0-9]+" => usize::from_str(<>).unwrap()
+};
