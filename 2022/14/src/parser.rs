@@ -1,5 +1,8 @@
+use std::collections::HashSet;
 use std::ops::Sub;
+use std::slice::Iter;
 
+use itertools::Itertools;
 use nom::bytes::complete::tag;
 use nom::character::complete;
 use nom::character::complete::{char, newline};
@@ -17,6 +20,40 @@ pub enum Bounds<T> {
         ymin: T,
         ymax: T,
     },
+}
+
+impl<T: Boundable> Bounds<T> {
+    pub fn xmin(&self) -> Option<T> {
+        if let Bounds::Bounded { xmin, .. } = self {
+            Some(*xmin)
+        } else {
+            None
+        }
+    }
+
+    pub fn xmax(&self) -> Option<T> {
+        if let Bounds::Bounded { xmax, .. } = self {
+            Some(*xmax)
+        } else {
+            None
+        }
+    }
+
+    pub fn ymin(&self) -> Option<T> {
+        if let Bounds::Bounded { ymin, .. } = self {
+            Some(*ymin)
+        } else {
+            None
+        }
+    }
+
+    pub fn ymax(&self) -> Option<T> {
+        if let Bounds::Bounded { ymax, .. } = self {
+            Some(*ymax)
+        } else {
+            None
+        }
+    }
 }
 
 trait Boundable: Copy + Ord + Sub<Output=Self> {}
@@ -81,40 +118,66 @@ impl<T> Bounds<T>
 #[derive(Debug, PartialEq)]
 pub struct Paths(Vec<Path>);
 
+impl Paths {
+    pub fn points_iter(&self) -> impl Iterator<Item=Point> + '_ {
+        self.0.iter().flat_map(|path| path.points_iter()).unique()
+    }
+}
+
 impl<T, E> Bounded<T> for Vec<E>
     where T: Boundable,
           E: Bounded<T>,
 {
     fn bounds(&self) -> Bounds<T> {
         self.iter()
-            .fold(Bounds::Empty, |mut bounds, b| {
+            .fold(Bounds::Empty, |bounds, b| {
                 bounds.union(&b.bounds())
             })
     }
 }
 
-impl Boundable for u16 {}
 
-impl Bounded<u16> for Paths {
-    fn bounds(&self) -> Bounds<u16> {
+impl Boundable for usize {}
+
+impl Bounded<usize> for Paths {
+    fn bounds(&self) -> Bounds<usize> {
         self.0.bounds()
     }
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Path(Vec<Point>);
+struct Path(Vec<Point>);
 
-impl Bounded<u16> for Path {
-    fn bounds(&self) -> Bounds<u16> {
+impl Path {
+    fn points_iter(&self) -> impl Iterator<Item=Point> + '_ {
+        self.0.iter().zip(self.0.iter().skip(1)).flat_map(|(&Point(x1, y1), &Point(x2, y2))| {
+            if x1 == x2 {
+                (y1.min(y2)..y1.max(y2)).into_iter().map(|y| Point(x1, y)).collect::<HashSet<_>>()
+            } else if y1 == y2 {
+                (x1.min(x2)..x1.max(x2)).into_iter().map(|x| Point(x, y1)).collect::<HashSet<_>>()
+            } else {
+                panic!("Points not properly aligned.");
+            }
+        })
+    }
+}
+
+impl Bounded<usize> for Path {
+    fn bounds(&self) -> Bounds<usize> {
         self.0.bounds()
     }
 }
 
-#[derive(Debug, PartialEq)]
-struct Point(u16, u16);
+#[derive(Debug, PartialEq, Hash, Clone, Eq)]
+pub struct Point(usize, usize);
 
-impl Bounded<u16> for Point {
-    fn bounds(&self) -> Bounds<u16> {
+impl Point {
+    pub fn x(&self) -> usize { self.0 }
+    pub fn y(&self) -> usize { self.1 }
+}
+
+impl Bounded<usize> for Point {
+    fn bounds(&self) -> Bounds<usize> {
         Bounds::Bounded {
             xmin: self.0,
             xmax: self.0,
@@ -140,8 +203,9 @@ fn point(input: &str) -> IResult<&str, Point> {
     Ok((input, Point(x, y)))
 }
 
-fn number(input: &str) -> IResult<&str, u16> {
-    complete::u16(input)
+fn number(input: &str) -> IResult<&str, usize> {
+    let (input, val) = complete::u32(input)?;
+    Ok((input, val as usize))
 }
 
 #[cfg(test)]
@@ -215,7 +279,7 @@ mod tests {
 
     #[test]
     fn bounds_to_tuple_empty() {
-        let b = Bounds::<u16>::Empty;
+        let b = Bounds::<usize>::Empty;
         assert_eq!(b.to_tuple(), None);
     }
 
@@ -227,7 +291,7 @@ mod tests {
 
     #[test]
     fn bounds_delta_x_y_empty() {
-        let b = Bounds::<u16>::Empty;
+        let b = Bounds::<usize>::Empty;
         assert_eq!(b.delta_x(), None);
         assert_eq!(b.delta_y(), None);
     }

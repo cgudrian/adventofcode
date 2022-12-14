@@ -51,6 +51,7 @@ dependencies = [
 name = "aoc2214"
 version = "0.1.0"
 dependencies = [
+ "itertools",
  "nom",
 ]
 
