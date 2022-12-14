@@ -37,7 +37,6 @@ mod tests {
     #[test]
     fn test_parser() {
         let (_, path) = parse("1,1 -> 2,2\n3,3 -> 4,4 -> 5,5\n").unwrap();
-        println!("### {:?}", path);
         assert_eq!(path.len(), 2);
         assert_eq!(path[0], Path(vec![Point(1, 1), Point(2, 2)]));
         assert_eq!(path[1], Path(vec![Point(3, 3), Point(4, 4), Point(5, 5)]));
