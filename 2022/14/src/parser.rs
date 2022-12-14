@@ -7,7 +7,7 @@ use nom::multi::{many0, separated_list1};
 use nom::sequence::separated_pair;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-enum Bounds<T> {
+pub enum Bounds<T> {
     Empty,
     Bounded {
         xmin: T,
@@ -17,7 +17,7 @@ enum Bounds<T> {
     },
 }
 
-trait Bounded<T> {
+pub trait Bounded<T> {
     fn bounds(&self) -> Bounds<T>;
 }
 
@@ -47,6 +47,13 @@ impl<T: Copy + Ord> Bounds<T> {
                 ymin: *yminl.min(yminr),
                 ymax: *ymaxl.max(ymaxr),
             }
+        }
+    }
+
+    pub fn to_tuple(&self) -> Option<(T, T, T, T)> {
+        match self {
+            Bounds::Empty => None,
+            Bounds::Bounded { xmin, xmax, ymin, ymax } => Some((*xmin, *xmax, *ymin, *ymax)),
         }
     }
 }
@@ -182,5 +189,17 @@ mod tests {
         let b1 = Bounds::Bounded { xmin: 1, xmax: 4, ymin: 2, ymax: 10 };
         let b2 = Bounds::Empty;
         assert_eq!(b1.union(&b2), b1);
+    }
+
+    #[test]
+    fn bounds_to_tuple_empty() {
+        let b = Bounds::<u16>::Empty;
+        assert_eq!(b.to_tuple(), None);
+    }
+
+    #[test]
+    fn bounds_to_tuple_bounded() {
+        let b = Bounds::Bounded { xmin: 1, xmax: 2, ymin: 3, ymax: 4 };
+        assert_eq!(b.to_tuple(), Some((1, 2, 3, 4)));
     }
 }
