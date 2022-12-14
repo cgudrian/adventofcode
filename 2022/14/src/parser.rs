@@ -19,7 +19,7 @@ pub enum Bounds<T> {
     },
 }
 
-trait Boundable: Copy + Ord + Sub<Output = Self> {}
+trait Boundable: Copy + Ord + Sub<Output=Self> {}
 
 pub trait Bounded<T: Boundable> {
     fn bounds(&self) -> Bounds<T>;
