@@ -54,7 +54,10 @@ impl<T: Copy + Ord> Bounds<T> {
 #[derive(Debug, PartialEq)]
 pub struct Cave(Vec<Path>);
 
-impl<T: Copy + Ord, C: Bounded<T>> Bounded<T> for Vec<C> {
+impl<T, E> Bounded<T> for Vec<E>
+    where T: Copy + Ord,
+          E: Bounded<T>,
+{
     fn bounds(&self) -> Bounds<T> {
         self.iter()
             .fold(Bounds::Empty, |mut bounds, b| {
