@@ -1,3 +1,5 @@
+use std::ops::Sub;
+
 use nom::bytes::complete::tag;
 use nom::character::complete;
 use nom::character::complete::{char, newline};
@@ -17,11 +19,15 @@ pub enum Bounds<T> {
     },
 }
 
-pub trait Bounded<T> {
+trait Boundable: Copy + Ord + Sub<Output = Self> {}
+
+pub trait Bounded<T: Boundable> {
     fn bounds(&self) -> Bounds<T>;
 }
 
-impl<T: Copy + Ord> Bounds<T> {
+impl<T> Bounds<T>
+    where T: Boundable
+{
     fn new() -> Bounds<T> {
         Bounds::Empty
     }
@@ -56,13 +62,27 @@ impl<T: Copy + Ord> Bounds<T> {
             Bounds::Bounded { xmin, xmax, ymin, ymax } => Some((*xmin, *xmax, *ymin, *ymax)),
         }
     }
+
+    pub fn delta_x(&self) -> Option<T> {
+        match self {
+            Bounds::Empty => None,
+            Bounds::Bounded { xmin, xmax, .. } => Some(*xmax - *xmin)
+        }
+    }
+
+    pub fn delta_y(&self) -> Option<T> {
+        match self {
+            Bounds::Empty => None,
+            Bounds::Bounded { ymin, ymax, .. } => Some(*ymax - *ymin)
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Cave(Vec<Path>);
 
 impl<T, E> Bounded<T> for Vec<E>
-    where T: Copy + Ord,
+    where T: Boundable,
           E: Bounded<T>,
 {
     fn bounds(&self) -> Bounds<T> {
@@ -72,6 +92,8 @@ impl<T, E> Bounded<T> for Vec<E>
             })
     }
 }
+
+impl Boundable for u16 {}
 
 impl Bounded<u16> for Cave {
     fn bounds(&self) -> Bounds<u16> {
@@ -201,5 +223,19 @@ mod tests {
     fn bounds_to_tuple_bounded() {
         let b = Bounds::Bounded { xmin: 1, xmax: 2, ymin: 3, ymax: 4 };
         assert_eq!(b.to_tuple(), Some((1, 2, 3, 4)));
+    }
+
+    #[test]
+    fn bounds_delta_x_y_empty() {
+        let b = Bounds::<u16>::Empty;
+        assert_eq!(b.delta_x(), None);
+        assert_eq!(b.delta_y(), None);
+    }
+
+    #[test]
+    fn bounds_delta_x_y_bounded() {
+        let b = Bounds::Bounded { xmin: 1, xmax: 2, ymin: 3, ymax: 4 };
+        assert_eq!(b.delta_x(), Some(1));
+        assert_eq!(b.delta_y(), Some(1));
     }
 }
