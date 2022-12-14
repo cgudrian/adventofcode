@@ -79,7 +79,7 @@ impl<T> Bounds<T>
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Cave(Vec<Path>);
+pub struct Paths(Vec<Path>);
 
 impl<T, E> Bounded<T> for Vec<E>
     where T: Boundable,
@@ -95,7 +95,7 @@ impl<T, E> Bounded<T> for Vec<E>
 
 impl Boundable for u16 {}
 
-impl Bounded<u16> for Cave {
+impl Bounded<u16> for Paths {
     fn bounds(&self) -> Bounds<u16> {
         self.0.bounds()
     }
@@ -124,9 +124,9 @@ impl Bounded<u16> for Point {
     }
 }
 
-pub fn parse(input: &str) -> IResult<&str, Cave> {
+pub fn parse(input: &str) -> IResult<&str, Paths> {
     let (input, paths) = all_consuming(many0(path))(input)?;
-    Ok((input, Cave(paths)))
+    Ok((input, Paths(paths)))
 }
 
 fn path(input: &str) -> IResult<&str, Path> {
@@ -150,8 +150,8 @@ mod tests {
 
     #[test]
     fn valid_input() {
-        let (_, cave) = parse("101,202 -> 303,404\n505,606 -> 707,808 -> 909,1000\n").unwrap();
-        assert_eq!(cave, Cave(vec![
+        let (_, paths) = parse("101,202 -> 303,404\n505,606 -> 707,808 -> 909,1000\n").unwrap();
+        assert_eq!(paths, Paths(vec![
             Path(vec![Point(101, 202), Point(303, 404)]),
             Path(vec![Point(505, 606), Point(707, 808), Point(909, 1000)]),
         ]));
@@ -179,12 +179,12 @@ mod tests {
     }
 
     #[test]
-    fn cave_bounds() {
-        let cave = Cave(vec![
+    fn paths_bounds() {
+        let paths = Paths(vec![
             Path(vec![Point(101, 202), Point(303, 404)]),
             Path(vec![Point(505, 606), Point(707, 808), Point(909, 1000)]),
         ]);
-        assert_eq!(cave.bounds(), Bounds::Bounded {
+        assert_eq!(paths.bounds(), Bounds::Bounded {
             xmin: 101,
             xmax: 909,
             ymin: 202,
