@@ -1,25 +1,55 @@
-use crate::parser::{Bounded, Bounds, Point};
+use std::iter::once;
+
+use crate::parser::{Bounded, Bounds, Paths, Point};
 
 mod parser;
 
 struct Cave {
+    xmin: usize,
+    ymin: usize,
+    ymax: usize,
+    sand_inlet: Point,
     data: Vec<Vec<u8>>,
-    bounds: Bounds<usize>,
 }
 
+const AIR: u8 = b'.';
+const ROCK: u8 = b'#';
+const SAND: u8 = b'o';
+const INLET: u8 = b'+';
+
 impl Cave {
-    fn new(bounds: &Bounds<usize>) -> Cave {
-        let width = bounds.delta_x().unwrap() + 1;
-        let height = bounds.delta_y().unwrap() + 1;
-        let data = (0..height).map(|_| vec![b'.'; width]).collect::<Vec<_>>();
+    fn new(sand_inlet: Point, rocks: &Paths) -> Cave {
+        let mut bounds = rocks.bounds().union(&sand_inlet.bounds());
+        let width = bounds.delta_x().unwrap() + 3;
+        let height = bounds.delta_y().unwrap() + 3;
+        let xmin = bounds.xmin().unwrap() - 1;
+        let ymin = bounds.ymin().unwrap();
+        let ymax = bounds.ymax().unwrap();
+        let mut data = (0..height).map(|_| vec![AIR; width]).collect::<Vec<_>>();
+        data[sand_inlet.y() - ymin][sand_inlet.x() - xmin] = INLET;
+        for p in rocks.points_iter() {
+            data[p.y() - ymin][p.x() - xmin] = ROCK;
+        }
+
         Cave {
+            xmin,
+            ymin,
+            ymax,
+            sand_inlet,
             data,
-            bounds: *bounds,
         }
     }
 
-    fn set_rock(&mut self, p: &Point) {
-        self.data[p.y() - self.bounds.ymin().unwrap()][p.x() - self.bounds.xmin().unwrap()] = b'#';
+    fn get(&self, p: &Point) -> Option<u8> {
+        if (p.y() < self.ymin || p.x() < self.xmin) {
+            None
+        } else {
+            Some(self.data[p.y() - self.ymin][p.x() - self.xmin])
+        }
+    }
+
+    fn set_sand(&mut self, p: &Point) {
+        self.data[p.y() - self.ymin][p.x() - self.xmin] = b'o';
     }
 
     fn dump(&self) {
@@ -27,29 +57,47 @@ impl Cave {
             println!("{}", String::from_utf8(row.clone()).unwrap())
         }
     }
+
+    fn pos_is_free(&self, pos: &Point) -> bool {
+        self.get(&pos).and_then(|p| Some(p == AIR || p == INLET)).unwrap_or(false)
+    }
+
+    fn drop_sand(&mut self) -> bool {
+        let mut pos = self.sand_inlet.clone();
+
+        while pos.y() <= self.ymax {
+            if self.pos_is_free(&pos.moved_down()) {
+                pos = pos.moved_down();
+            } else if self.pos_is_free(&pos.moved_down_left()) {
+                pos = pos.moved_down_left();
+            } else if self.pos_is_free(&pos.moved_down_right()) {
+                pos = pos.moved_down_right()
+            } else {
+                self.set_sand(&pos);
+                return true;
+            }
+        }
+
+        false
+    }
 }
 
 fn solve1(input: &str) -> usize {
-    let (_, paths) = parser::parse(input).unwrap();
-    let bounds = paths.bounds();
-    let mut cave = Cave::new(&bounds);
-    for p in paths.points_iter() {
-        cave.set_rock(&p);
+    let (_, rocks) = parser::parse(input).unwrap();
+    let mut cave = Cave::new(Point::new(500, 0), &rocks);
+    let mut counter = 0;
+    while cave.drop_sand() {
+        counter += 1;
+        //cave.dump();
     }
     cave.dump();
-    0
+    counter
 }
 
 static INPUT: &str = include_str!("input.txt");
 
 fn main() {
     println!("Answer 1: {}", solve1(INPUT));
-    let v = vec![vec![1, 2, 3], vec![4, 5, 6]];
-    let v2: Vec<&u8> = v.iter().flat_map(|e| e.iter()).collect();
-
-    let v = vec![1, 2, 3, 4, 5];
-    let res: Vec<(&i32, &i32)> = v.iter().zip(v.iter().skip(1)).collect();
-    println!("{:?}", res);
 }
 
 #[cfg(test)]

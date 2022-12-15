@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::iter::once;
 use std::ops::Sub;
 use std::slice::Iter;
 
@@ -58,7 +59,7 @@ impl<T: Boundable> Bounds<T> {
 
 trait Boundable: Copy + Ord + Sub<Output=Self> {}
 
-pub trait Bounded<T: Boundable> {
+pub trait Bounded<T: Boundable + ?Sized> {
     fn bounds(&self) -> Bounds<T>;
 }
 
@@ -69,7 +70,7 @@ impl<T> Bounds<T>
         Bounds::Empty
     }
 
-    fn union(&self, rhs: &Bounds<T>) -> Self {
+    pub fn union(&self, rhs: &Bounds<T>) -> Self {
         match (self, rhs) {
             (Bounds::Empty, Bounds::Empty) => Bounds::Empty,
             (lhs, Bounds::Empty) => *lhs,
@@ -152,9 +153,9 @@ impl Path {
     fn points_iter(&self) -> impl Iterator<Item=Point> + '_ {
         self.0.iter().zip(self.0.iter().skip(1)).flat_map(|(&Point(x1, y1), &Point(x2, y2))| {
             if x1 == x2 {
-                (y1.min(y2)..y1.max(y2)).into_iter().map(|y| Point(x1, y)).collect::<HashSet<_>>()
+                (y1.min(y2)..=y1.max(y2)).into_iter().map(|y| Point(x1, y)).collect::<HashSet<_>>()
             } else if y1 == y2 {
-                (x1.min(x2)..x1.max(x2)).into_iter().map(|x| Point(x, y1)).collect::<HashSet<_>>()
+                (x1.min(x2)..=x1.max(x2)).into_iter().map(|x| Point(x, y1)).collect::<HashSet<_>>()
             } else {
                 panic!("Points not properly aligned.");
             }
@@ -172,8 +173,12 @@ impl Bounded<usize> for Path {
 pub struct Point(usize, usize);
 
 impl Point {
+    pub fn new(x: usize, y: usize) -> Point { Point(x, y) }
     pub fn x(&self) -> usize { self.0 }
     pub fn y(&self) -> usize { self.1 }
+    pub fn moved_down(&self) -> Self { Point(self.0, self.1 + 1) }
+    pub fn moved_down_right(&self) -> Self { Point(self.0 + 1, self.1 + 1) }
+    pub fn moved_down_left(&self) -> Self { Point(self.0 - 1, self.1 + 1) }
 }
 
 impl Bounded<usize> for Point {
