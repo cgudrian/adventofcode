@@ -6,6 +6,7 @@ mod parser;
 
 struct Cave {
     xmin: usize,
+    xmax: usize,
     ymin: usize,
     ymax: usize,
     sand_inlet: Point,
@@ -20,9 +21,10 @@ const INLET: u8 = b'+';
 impl Cave {
     fn new(sand_inlet: Point, rocks: &Paths) -> Cave {
         let mut bounds = rocks.bounds().union(&sand_inlet.bounds());
-        let width = bounds.delta_x().unwrap() + 3;
+        let width = bounds.delta_x().unwrap() + 1 + 30;
         let height = bounds.delta_y().unwrap() + 3;
-        let xmin = bounds.xmin().unwrap() - 1;
+        let xmin = bounds.xmin().unwrap() - 15;
+        let xmax = bounds.xmax().unwrap() + 15;
         let ymin = bounds.ymin().unwrap();
         let ymax = bounds.ymax().unwrap();
         let mut data = (0..height).map(|_| vec![AIR; width]).collect::<Vec<_>>();
@@ -33,6 +35,7 @@ impl Cave {
 
         Cave {
             xmin,
+            xmax,
             ymin,
             ymax,
             sand_inlet,
@@ -40,16 +43,28 @@ impl Cave {
         }
     }
 
+    pub fn add_bottom(&mut self) {
+        let vec = self.data.last().as_mut();
+        let y = self.data.len() - 1;
+        for x in self.xmin..=self.xmax {
+            self.set_rock(Point::new(x, y));
+        }
+    }
+
     fn get(&self, p: &Point) -> Option<u8> {
-        if (p.y() < self.ymin || p.x() < self.xmin) {
+        if (p.y() < self.ymin || p.x() < self.xmin || p.x() > self.xmax) {
             None
         } else {
             Some(self.data[p.y() - self.ymin][p.x() - self.xmin])
         }
     }
 
-    fn set_sand(&mut self, p: &Point) {
+    fn set_sand(&mut self, p: Point) {
         self.data[p.y() - self.ymin][p.x() - self.xmin] = b'o';
+    }
+
+    fn set_rock(&mut self, p: Point) {
+        self.data[p.y() - self.ymin][p.x() - self.xmin] = b'#';
     }
 
     fn dump(&self) {
@@ -62,7 +77,7 @@ impl Cave {
         self.get(&pos).and_then(|p| Some(p == AIR || p == INLET)).unwrap_or(false)
     }
 
-    fn drop_sand(&mut self) -> bool {
+    fn drop_sand1(&mut self) -> bool {
         let mut pos = self.sand_inlet.clone();
 
         while pos.y() <= self.ymax {
@@ -73,12 +88,28 @@ impl Cave {
             } else if self.pos_is_free(&pos.moved_down_right()) {
                 pos = pos.moved_down_right()
             } else {
-                self.set_sand(&pos);
+                self.set_sand(pos);
                 return true;
             }
         }
 
         false
+    }
+    fn drop_sand2(&mut self) -> bool {
+        let mut pos = self.sand_inlet.clone();
+
+        loop {
+            if self.pos_is_free(&pos.moved_down()) {
+                pos = pos.moved_down();
+            } else if self.pos_is_free(&pos.moved_down_left()) {
+                pos = pos.moved_down_left();
+            } else if self.pos_is_free(&pos.moved_down_right()) {
+                pos = pos.moved_down_right()
+            } else {
+                self.set_sand(pos.clone());
+                return pos != self.sand_inlet;
+            }
+        }
     }
 }
 
@@ -86,7 +117,7 @@ fn solve1(input: &str) -> usize {
     let (_, rocks) = parser::parse(input).unwrap();
     let mut cave = Cave::new(Point::new(500, 0), &rocks);
     let mut counter = 0;
-    while cave.drop_sand() {
+    while cave.drop_sand1() {
         counter += 1;
         //cave.dump();
     }
@@ -94,10 +125,24 @@ fn solve1(input: &str) -> usize {
     counter
 }
 
+fn solve2(input: &str) -> usize {
+    let (_, rocks) = parser::parse(input).unwrap();
+    let mut cave = Cave::new(Point::new(500, 0), &rocks);
+    cave.add_bottom();
+    let mut counter = 0;
+    while cave.drop_sand2() {
+        counter += 1;
+        //cave.dump();
+    }
+    cave.dump();
+    counter + 1
+}
+
 static INPUT: &str = include_str!("input.txt");
 
 fn main() {
     println!("Answer 1: {}", solve1(INPUT));
+    println!("Answer 2: {}", solve2(INPUT));
 }
 
 #[cfg(test)]
@@ -110,6 +155,6 @@ mod tests {
 
     #[test]
     fn example1() {
-        assert_eq!(solve1(EX), 24);
+        assert_eq!(solve2(EX), 24);
     }
 }
