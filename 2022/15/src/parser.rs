@@ -17,6 +17,10 @@ impl Point {
     fn distance_to(&self, rhs: &Point) -> i32 {
         (self.0 - rhs.0).abs() + (self.1 - rhs.1).abs()
     }
+
+    pub fn tuning_frequency(&self) -> u64 {
+        self.0 as u64 * 4000000 + self.1 as u64
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -35,7 +39,25 @@ impl Sensor {
         }
     }
 
-    pub fn covered_range_for_y(&self, y: i32) -> Option<RangeInclusive<i32>> {
+    /// Returns `true`, if `p` is a possible location for the beacon.
+    pub fn point_in_range(&self, p: &Point) -> bool {
+        p.distance_to(&self.pos) <= self.distance
+    }
+
+    pub fn within_rect(&self, tl: &Point, br: &Point) -> bool {
+        (tl.0..=br.0).contains(&self.pos.0) && (tl.1..=br.1).contains(&self.pos.1)
+    }
+
+    pub fn range(&self, y: i32) -> Option<RangeInclusive<i32>> {
+        let dx = self.distance - (y - self.pos.1).abs();
+        if dx < 0 {
+            None
+        } else {
+            Some(self.pos.0 - dx..=self.pos.0 + dx)
+        }
+    }
+
+    pub fn positions_with_no_beacons(&self, y: i32) -> Option<RangeInclusive<i32>> {
         let dx = self.distance - (y - self.pos.1).abs();
         if dx < 0 {
             None
@@ -179,28 +201,28 @@ mod tests {
     #[test]
     fn sensor_covered_range_for_x_sensor_below() {
         let sensor = Sensor::new(Point(0, 0), Point(0, 100));
-        assert_eq!(sensor.covered_range_for_y(1000), None);
-        assert_eq!(sensor.covered_range_for_y(0), Some(-100..=100));
-        assert_eq!(sensor.covered_range_for_y(100), None);
-        assert_eq!(sensor.covered_range_for_y(-100), Some(0..=0));
+        assert_eq!(sensor.positions_with_no_beacons(1000), None);
+        assert_eq!(sensor.positions_with_no_beacons(0), Some(-100..=100));
+        assert_eq!(sensor.positions_with_no_beacons(100), None);
+        assert_eq!(sensor.positions_with_no_beacons(-100), Some(0..=0));
     }
 
     #[test]
     fn sensor_covered_range_for_x_sensor_right() {
         let sensor = Sensor::new(Point(0, 0), Point(100, 0));
-        assert_eq!(sensor.covered_range_for_y(1000), None);
-        assert_eq!(sensor.covered_range_for_y(0), Some(-100..=99));
-        assert_eq!(sensor.covered_range_for_y(100), Some(0..=0));
-        assert_eq!(sensor.covered_range_for_y(-100), Some(0..=0));
+        assert_eq!(sensor.positions_with_no_beacons(1000), None);
+        assert_eq!(sensor.positions_with_no_beacons(0), Some(-100..=99));
+        assert_eq!(sensor.positions_with_no_beacons(100), Some(0..=0));
+        assert_eq!(sensor.positions_with_no_beacons(-100), Some(0..=0));
     }
 
     #[test]
     fn sensor_covered_range_for_x_sensor_right_below() {
         let sensor = Sensor::new(Point(0, 0), Point(100, 100));
-        assert_eq!(sensor.covered_range_for_y(1000), None);
-        assert_eq!(sensor.covered_range_for_y(0), Some(-200..=200));
-        assert_eq!(sensor.covered_range_for_y(100), Some(-100..=99));
-        assert_eq!(sensor.covered_range_for_y(200), Some(0..=0));
-        assert_eq!(sensor.covered_range_for_y(-200), Some(0..=0));
+        assert_eq!(sensor.positions_with_no_beacons(1000), None);
+        assert_eq!(sensor.positions_with_no_beacons(0), Some(-200..=200));
+        assert_eq!(sensor.positions_with_no_beacons(100), Some(-100..=99));
+        assert_eq!(sensor.positions_with_no_beacons(200), Some(0..=0));
+        assert_eq!(sensor.positions_with_no_beacons(-200), Some(0..=0));
     }
 }
