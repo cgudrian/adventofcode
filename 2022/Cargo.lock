@@ -56,6 +56,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "aoc2215"
+version = "0.1.0"
+dependencies = [
+ "nom",
+]
+
+[[package]]
 name = "ascii-canvas"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
