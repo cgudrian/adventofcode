@@ -134,47 +134,6 @@ mod tests {
     }
 
     #[test]
-    fn sensor_covered_points_beacon_at_sensor_position() {
-        let sensor = Sensor::new(Point(0, 0), Point(0, 0));
-        let points = sensor.covered_points();
-        assert!(points.is_empty());
-    }
-
-    #[test]
-    fn sensor_covered_points_beacon_at_distance_one() {
-        let sensor = Sensor::new(Point(0, 0), Point(1, 0));
-        let points = sensor.covered_points();
-        assert_eq!(
-            points,
-            [Point(0, -1), Point(-1, 0), Point(0, 0), Point(0, 1)].into()
-        );
-    }
-
-    #[test]
-    fn sensor_covered_points_beacon_at_distance_two() {
-        let sensor = Sensor::new(Point(0, 0), Point(1, 1));
-        let points = sensor.covered_points();
-        assert_eq!(
-            points,
-            [
-                Point(0, -2),
-                Point(-1, -1),
-                Point(0, -1),
-                Point(1, -1),
-                Point(-2, 0),
-                Point(-1, 0),
-                Point(0, 0),
-                Point(1, 0),
-                Point(2, 0),
-                Point(-1, 1),
-                Point(0, 1),
-                Point(0, 2),
-            ]
-            .into()
-        );
-    }
-
-    #[test]
     fn sensor_covered_range_for_x_sensor_below() {
         let sensor = Sensor::new(Point(0, 0), Point(0, 100));
         assert_eq!(sensor.positions_with_no_beacons(1000), None);
