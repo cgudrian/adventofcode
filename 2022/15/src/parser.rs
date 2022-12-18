@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::ops::RangeInclusive;
 
 use nom::{
@@ -39,15 +38,6 @@ impl Sensor {
         }
     }
 
-    /// Returns `true`, if `p` is a possible location for the beacon.
-    pub fn point_in_range(&self, p: &Point) -> bool {
-        p.distance_to(&self.pos) <= self.distance
-    }
-
-    pub fn within_rect(&self, tl: &Point, br: &Point) -> bool {
-        (tl.0..=br.0).contains(&self.pos.0) && (tl.1..=br.1).contains(&self.pos.1)
-    }
-
     pub fn range(&self, y: i32) -> Option<RangeInclusive<i32>> {
         let dx = self.distance - (y - self.pos.1).abs();
         if dx < 0 {
@@ -75,20 +65,6 @@ impl Sensor {
         } else {
             Some(self.pos.0 - dx..=self.pos.0 + dx)
         }
-    }
-
-    pub fn covered_points(&self) -> HashSet<Point> {
-        let mut res = HashSet::new();
-        let ymin = self.pos.1 - self.distance;
-        let ymax = self.pos.1 + self.distance;
-        for y in ymin..=ymax {
-            let dx = self.distance - (y - self.pos.1).abs();
-            for x in self.pos.0 - dx..=self.pos.0 + dx {
-                res.insert(Point(x, y));
-            }
-        }
-        res.remove(&self.closest_beacon);
-        res
     }
 }
 

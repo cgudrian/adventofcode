@@ -60,7 +60,7 @@ fn solve2(input: &str, max_coord: i32) -> u64 {
     let (_, sensors) = parse(input).unwrap();
     let mut pos: Option<Point> = None;
     for y in 0..=max_coord {
-        let mut ranges = sensors
+        let ranges = sensors
             .iter()
             .flat_map(|sensor| sensor.range(y))
             .collect::<Vec<_>>();
